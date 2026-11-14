@@ -1,0 +1,37 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Database SQLite local (không commit dữ liệu thực tế/cục bộ lên Git)
+data/*.db
+data/*.sqlite3
+data/*.db-journal
+
+# Environment variables & Secrets (Bảo mật API Key theo Quy tắc VI.6)
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Streamlit configuration & logs
+.streamlit/*
+!.streamlit/config.toml
+
+# Pytest cache
+.pytest_cache/
+
+# Temporary diagnostic & test output files
+*.txt
+!requirements.txt
+
+#docs
+.docs   
