@@ -1,37 +1,62 @@
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *$py.class
-
-# Virtual Environment
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
 .venv/
 venv/
+env/
 ENV/
-
-# Database SQLite local (không commit dữ liệu thực tế/cục bộ lên Git)
-data/*.db
-data/*.sqlite3
-data/*.db-journal
-
-# Environment variables & Secrets (Bảo mật API Key theo Quy tắc VI.6)
 .env
-.env.*
+*.env.*
 !.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+
+# Data & secrets
+data/output/
+data/import/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+secrets/
+
+# Docker
+*.override.yml
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Streamlit configuration & logs
 .streamlit/*
 !.streamlit/config.toml
 
-# Pytest cache
-.pytest_cache/
-
 # Temporary diagnostic & test output files
 *.txt
 !requirements.txt
-
-#docs
-.docs   
