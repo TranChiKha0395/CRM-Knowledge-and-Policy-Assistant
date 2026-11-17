@@ -4,10 +4,10 @@ help:
 	@echo "Targets: up | down | dev-db | lint | test | migrate"
 
 up:
-	docker compose up -d
+	docker compose --profile app up --build -d
 
 down:
-	docker compose down
+	docker compose --profile app down
 
 dev-db:
 	docker compose up -d db redis

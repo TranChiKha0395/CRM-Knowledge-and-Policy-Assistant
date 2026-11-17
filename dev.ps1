@@ -1,4 +1,4 @@
-﻿# dev.ps1 — Thay thế Makefile trên Windows
+# dev.ps1 — Thay thế Makefile trên Windows
 # Dùng: .\dev.ps1 <target>
 param([string]$Target = "help")
 
@@ -10,13 +10,13 @@ function Invoke-DevDB {
 }
 
 function Invoke-Up {
-    Write-Host "Starting all services..." -ForegroundColor Cyan
-    docker compose up -d
+    Write-Host "Starting all services (db, redis + profile app)..." -ForegroundColor Cyan
+    docker compose --profile app up --build -d
 }
 
 function Invoke-Down {
     Write-Host "Stopping all services..." -ForegroundColor Cyan
-    docker compose down
+    docker compose --profile app down
 }
 
 function Invoke-Logs {

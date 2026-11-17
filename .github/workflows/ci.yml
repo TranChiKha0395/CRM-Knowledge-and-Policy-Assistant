@@ -30,6 +30,8 @@ jobs:
         run: ruff check .
 
       - name: Run Pytest backend contracts
+        env:
+          APP_ENV: test
         run: pytest -q
 
   worker-syntax-check:
