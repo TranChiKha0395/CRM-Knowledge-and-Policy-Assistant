@@ -3,3 +3,4 @@
 CREATE EXTENSION IF NOT EXISTS vector;         -- pgvector 0.8+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";   -- uuid_generate_v4()
 CREATE EXTENSION IF NOT EXISTS unaccent;       -- Vietnamese accentless full-text search (VN 01)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;        -- Trigram similarity search

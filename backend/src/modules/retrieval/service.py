@@ -6,6 +6,7 @@ from src.config import settings
 from src.modules.knowledge.schemas import PassageSummary
 from src.modules.retrieval.models import VIETNAMESE_CRM_SYNONYMS
 from src.shared.auth import AuthenticatedUser, check_policy_audience
+from src.shared.contracts import HybridQuerySpec
 from src.shared.enums import PolicyLifecycleStatus
 
 
@@ -60,3 +61,52 @@ class RetrievalService:
                 break
 
         return filtered
+
+    def compute_rrf_score(
+        self,
+        vector_rank: int | None,
+        fts_rank: int | None,
+        trgm_rank: int | None = None,
+        *,
+        k: int = 60,
+    ) -> float:
+        """Compute deterministic Reciprocal Rank Fusion score across retrieval signals."""
+        if k <= 0:
+            raise ValueError("RRF smoothing constant k must be positive.")
+
+        score = 0.0
+        for rank in (vector_rank, fts_rank, trgm_rank):
+            if rank is None:
+                continue
+            if rank < 1:
+                raise ValueError("RRF rank must be >= 1 when provided.")
+            score += 1.0 / (k + rank)
+        return score
+
+    async def search_hybrid(
+        self,
+        user: AuthenticatedUser,
+        spec: HybridQuerySpec,
+    ) -> list[PassageSummary]:
+        """Run pre-filtered Vietnamese hybrid retrieval (RRF scaffold for Gate G1)."""
+        _normalized, _expanded = self.normalize_query_vi(spec.query)
+        # TODO(G1): Query PostgreSQL pgvector + FTS + pg_trgm candidates matching
+        # spec.applicable_version_ids and rank via compute_rrf_score after prefilter_passages.
+        return self.prefilter_passages(
+            user,
+            [],
+            allow_historical=spec.allow_historical,
+            allow_future_preview=spec.allow_future_preview,
+            top_k=spec.top_k,
+        )
+
+    async def fetch_authoritative_passages(
+        self,
+        user: AuthenticatedUser,
+        passage_ids: list[str],
+    ) -> dict[str, PassageSummary]:
+        """Re-fetch live authoritative passage state for Layer 5 post-generation verification."""
+        # TODO(G1): Query current PostgreSQL Passage + DocumentVersion rows for passage_ids
+        # and enforce audience filtering before Layer 5 verify_final_delivery (Worked Case 9).
+        _ = user, passage_ids
+        return {}
