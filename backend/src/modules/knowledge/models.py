@@ -6,6 +6,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.config import settings
 from src.db import Base, TimestampMixin
 
 
@@ -77,4 +78,6 @@ class PassageEmbedding(TimestampMixin, Base):
         String(64), ForeignKey("passages.id", ondelete="CASCADE"), primary_key=True
     )
     embedding_model: Mapped[str] = mapped_column(String(128), nullable=False)
-    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(
+        Vector(settings.EMBEDDING_DIM), nullable=False
+    )

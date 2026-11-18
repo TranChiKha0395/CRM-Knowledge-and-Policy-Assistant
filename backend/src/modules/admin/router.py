@@ -56,11 +56,9 @@ async def toggle_emergency_disable(
     current_user: AuthenticatedUser = Depends(require_roles(UserRole.ADMINISTRATOR)),
 ) -> dict[str, object]:
     """Toggle emergency disable mode while preserving manual CSV lookup fallback (OPS 05)."""
-    return {
-        "disabled": payload.disabled,
-        "reason": payload.reason,
-        "actor_id": current_user.user_id,
-    }
+    return await service.set_emergency_disable(
+        current_user, payload.disabled, payload.reason
+    )
 
 
 @router.get("/ops-summary", response_model=AdminOpsSummaryResponse)

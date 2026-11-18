@@ -20,12 +20,14 @@ class Settings(BaseSettings):
     LLM_MAX_INPUT_TOKENS: int = 6000
     LLM_MAX_OUTPUT_TOKENS: int = 900
     LLM_MAX_CALLS_PER_MONTH: int = 2000
+    LLM_REQUEST_TIMEOUT_SECONDS: int = 20
 
     # --- RFP / SRS Runtime Bounds (Base Scope Only) ---
     APP_TIMEZONE: str = "Asia/Ho_Chi_Minh"
     ENABLE_ANSWER_STREAMING: bool = False
 
     LLM_MAX_CALLS_PER_PACKAGE: int = 2
+    ANSWER_SYSTEM_PROMPT_PATH: str = "prompts/answer_system_vi.txt"
     ANSWER_MAX_PASSAGES: int = 8
     ANSWER_MAX_PACKAGES_PER_MONTH: int = 1000
     PASSAGE_MAX_CHARS: int = 6000
@@ -39,6 +41,8 @@ class Settings(BaseSettings):
     IMPORT_SNAPSHOT_STALENESS_HOURS: int = 25
 
     CACHE_WITHDRAWAL_MAX_SECONDS: int = 300
+    EMERGENCY_DISABLE_CACHE_KEY: str = "ckpa:emergency_disable"
+    OPS_LATENCY_P95_SECONDS: int = 25
     PILOT_MAX_NAMED_USERS: int = 20
     PILOT_MAX_CONCURRENT_SESSIONS: int = 5
     SUPPORT_HOURS_START: str = "08:00"

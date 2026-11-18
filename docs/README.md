@@ -1,48 +1,47 @@
-# Trung tâm Tài liệu Dự án (`docs/`)
+# Trung tâm Tài liệu Dự án — SongNhat CRM Knowledge & Policy Assistant (CKPA)
 
-Toàn bộ tài liệu kỹ thuật, đặc tả yêu cầu, kiến trúc và quy trình phối hợp của **SongNhat CRM Knowledge & Policy Assistant** được phân nhóm thành `4` thư mục theo phạm vi **Base Scope (`M`)** trong RFP.
-
-## Cấu trúc Thư mục Tài liệu
-
-### 1. [`specs/`](./specs/) — Đặc tả Yêu cầu, Lộ trình & Tuân thủ
-| Tài liệu | Mô tả |
-|---|---|
-| [srs.md](./specs/srs.md) | Đặc tả Yêu cầu Phần mềm (SRS) cho đội `10` người, giới hạn chặt trong Base Scope (`M`). |
-| [roadmap.md](./specs/roadmap.md) | Lộ trình triển khai `5` Release Gate (`G0–G4`) và cơ chế cuốn chiếu Jira Sprint. |
-| [compliance-matrix.md](./specs/compliance-matrix.md) | Ma trận truy vết `57` mã yêu cầu RFP (`WP`, `MOD`, `DAT`, `EVL`, `OPS`, `SEC`, `VN`, `DEL`). |
-
-### 2. [`architecture/`](./architecture/) — Kiến trúc, Dữ liệu & Kiểm thử
-| Tài liệu | Mô tả |
-|---|---|
-| [overview.md](./architecture/overview.md) | Kiến trúc tổng thể Modular Monolith (`FastAPI` + `Celery` + `Next.js` + `PostgreSQL/pgvector` + `Redis` + `Nginx`). |
-| [backend-modules.md](./architecture/backend-modules.md) | Trách nhiệm, hợp đồng dữ liệu và phụ thuộc của `12` module Backend và `3` Worker task. |
-| [business-workflows.md](./architecture/business-workflows.md) | Các luồng nghiệp vụ lõi: hỏi đáp có trích dẫn, nhập liệu CSV, chuyển tiếp chủ sở hữu, audit. |
-| [policy-lifecycle.md](./architecture/policy-lifecycle.md) | Trạng thái chính sách (`draft` → `reviewed` → `active` → `superseded` / `retired`) và kiểm tra hiệu lực. |
-| [erd-and-csv-contract.md](./architecture/erd-and-csv-contract.md) | Mô hình dữ liệu PostgreSQL/pgvector & chuẩn `2` tệp CSV UTF-8 (`21` cột passages / `23` cột critical fields). |
-| [testing-tiers.md](./architecture/testing-tiers.md) | Phân tầng kiểm thử (Unit, Integration, Eval `Dev/Val/Sealed`, Ops/Drill). |
-
-### 3. [`playbooks/`](./playbooks/) — Quy trình Phối hợp Đội 10 người
-| Tài liệu | Mô tả |
-|---|---|
-| [team-playbook.md](./playbooks/team-playbook.md) | Tổ chức `4` Squad (`A–D`, `A1–D2`), phân công sở hữu module và RACI. |
-| [jira-playbook.md](./playbooks/jira-playbook.md) | Quy trình tạo, cập nhật trạng thái và đóng Ticket Jira theo Gate. |
-| [git-playbook.md](./playbooks/git-playbook.md) | Quy ước nhánh (`<type>/<ISSUE-KEY>-<summary-slug>`), commit và bảo vệ `main`/`develop`. |
-| [jira-git-workflow.md](./playbooks/jira-git-workflow.md) | Hướng dẫn nhanh (cheat sheet) nhận task Jira → tạo nhánh → lint/test → mở PR. |
-| [rules.md](./playbooks/rules.md) | Nội quy nhóm & kỷ luật triển khai. |
-| [weekly-report.md](./playbooks/weekly-report.md) | Mẫu báo cáo tiến độ tuần và rà soát rủi ro Gate. |
-| [pm-schedule-tien.md](./playbooks/pm-schedule-tien.md) | Lịch làm việc 10 tuần (T3–T12) của PM Hoàng Tiến (A1), mốc họp chốt Gate và quyết định Pilot 20 ngày. |
-
-### 4. [`work-packages/`](./work-packages/) — Backlog Chuẩn Import Jira
-| Tài liệu | Mô tả |
-|---|---|
-| [README.md](./work-packages/README.md) | Hướng dẫn import CSV vào Jira và ánh xạ `10` vai trò (`A1–D2`). |
-| [05-jira-5gates-import.csv](./work-packages/05-jira-5gates-import.csv) | Tệp import Jira `5` Gate (`62` dòng: `5` Epics, `10` Stories, `47` Tasks; phủ `57/57` mã RFP). |
+> Bộ tài liệu kỹ thuật, kiến trúc, hợp đồng dữ liệu, vận hành và phối hợp đội ngũ cho hệ thống **SongNhat CRM Knowledge & Policy Assistant (CKPA)** theo định hướng **Modular Monolith + Deterministic Policy Gate + Constrained RAG**, giới hạn chặt chẽ trong **Base Scope (`M`)** của RFP.
 
 ---
 
-## Thứ tự đọc nhanh khi Onboarding
+## 1. Danh mục 5 Tài liệu Cốt lõi
 
-1. **Tất cả thành viên (`A1–D2`):** [srs.md](./specs/srs.md) → [roadmap.md](./specs/roadmap.md) → [team-playbook.md](./playbooks/team-playbook.md) → [rules.md](./playbooks/rules.md) → [jira-git-workflow.md](./playbooks/jira-git-workflow.md).
-2. **Backend & Dữ liệu (`B1, B2, C1`):** [overview.md](./architecture/overview.md) → [backend-modules.md](./architecture/backend-modules.md) → [erd-and-csv-contract.md](./architecture/erd-and-csv-contract.md) → [policy-lifecycle.md](./architecture/policy-lifecycle.md).
-3. **AI/Prompt & Frontend (`C2, C3`):** [business-workflows.md](./architecture/business-workflows.md) → [backend-modules.md](./architecture/backend-modules.md) → [testing-tiers.md](./architecture/testing-tiers.md).
-4. **QA, Eval & Ops (`D1, D2`) + PM/BA (`A1, A2`):** [compliance-matrix.md](./specs/compliance-matrix.md) → [testing-tiers.md](./architecture/testing-tiers.md) → [work-packages/README.md](./work-packages/README.md).
+| Tài liệu | Chủ đề trọng tâm | Đối tượng ưu tiên |
+|---|---|---|
+| [01-overview.md](./01-overview.md) | Tổng quan dự án, mục tiêu, phạm vi `Base Scope (M)` vs `O1`/`O`, tham số **Common Bid Basis**, `10` điều cấm ngoài phạm vi và tóm tắt đội ngũ `10` người (`P1–P5`, `S1–S5`). | Toàn bộ `10` thành viên |
+| [02-architecture.md](./02-architecture.md) | Kiến trúc **Modular Monolith + Deterministic Policy Gate + Constrained RAG**, `6` Bất biến (`INV-01..06`), Pipeline `5` tầng ánh xạ tới `shared/contracts.py`, `12` module Backend + `3` Worker tasks + `5` Frontend routes, `3` Sequence Diagrams (gồm *Worked Case 9*), vòng đời `7+2` trạng thái và `5` ADRs. | `S1`, `S2`, `S3`, `S4`, `S5`, `P2`, `P5` |
+| [03-database-and-contracts.md](./03-database-and-contracts.md) | PostgreSQL 16 (`pgvector`, `unaccent`, `pg_trgm`), `erDiagram` `22` bảng ORM & chiến lược index, hợp đồng `2` CSV UTF-8 (`21` & `23` cột), `12` nhóm API `/api/v1/*`, mã lỗi Fail-Closed, JSON `AnswerPackage` `7` phần và hợp đồng `shared/contracts.py`. | `S2`, `S3`, `S5`, `P3`, `S4` |
+| [04-setup-and-operations.md](./04-setup-and-operations.md) | Hướng dẫn cài đặt Local (`dev.ps1`, `Makefile`, `docker compose --profile app`), Celery Beat & Cache Purge `<= 300s`, kiểm thử `4` tầng (`60/40/100 Sealed` + `80 Challenges` + `OPS 01–08` với `p95 <= 25s`), Backup/Restore Replay (`35` ngày, `RTO 4h / RPO 24h`), Open Exit (`OPS 08`), Incident Runbook/SLA và Checklist Pháp lý Phụ lục F. | `S5`, `S4`, `P5`, `P3`, `P4`, `S1` |
+| [05-roadmap-and-team.md](./05-roadmap-and-team.md) | Lộ trình `5` Release Gates (`G0–G4` trên `12` tuần, không gộp G3 & G4), Ma trận **Dual-Hat** cho `10` người, quy chuẩn Git/Branch/PR, Jira & Rolling Dispatch (`1–2` task/người), nội quy `R01–R10`, cơ chế kỷ luật (`1 sẹo = -2%`, `5 sẹo = -20%`) và họp bi-daily. | Toàn bộ `10` thành viên |
+
+---
+
+## 2. Lộ trình Đọc theo Vai trò (`P1–P5` & `S1–S5`)
+
+| Nhóm vai trò (RFP Mục 11) | Thành viên | Lộ trình đọc khuyến nghị | Điểm cần lưu ý bắt buộc |
+|---|---|---|---|
+| **Sponsor & Điều phối Nhà cung cấp** | `P1` Mỹ Vân, `S1` Hoàng Tiến | [01-overview.md](./01-overview.md) → [05-roadmap-and-team.md](./05-roadmap-and-team.md) → [04-setup-and-operations.md](./04-setup-and-operations.md) | Không gộp Gate `G3` và `G4`; tách nghiệm thu Pilot với quyết định đầu tư mở rộng (`<= 24` tháng payback); khóa chặt `Base Scope (M)`. |
+| **Chủ sở hữu Chính sách, Tri thức & Người dùng đại diện** | `P2` Hữu Tài, `P3` Chí Kha, `P4` Trà My | [01-overview.md](./01-overview.md) → [03-database-and-contracts.md](./03-database-and-contracts.md) (Mục CSV & `AnswerPackage`) → [04-setup-and-operations.md](./04-setup-and-operations.md) → [05-roadmap-and-team.md](./05-roadmap-and-team.md) | Duyệt `3` họ chính sách, Authority Matrix, `2` tệp CSV UTF-8; phân tách `Two policy reviewers` (`P2` + `P3`/`P5`) và `Five representative users` (ngoài đội Build). |
+| **Kỹ sư Build (Tích hợp, Truy xuất & Ứng dụng)** | `S2` Quốc Hưng, `S3` Yến Nhi | [01-overview.md](./01-overview.md) → [02-architecture.md](./02-architecture.md) → [03-database-and-contracts.md](./03-database-and-contracts.md) → [04-setup-and-operations.md](./04-setup-and-operations.md) → [05-roadmap-and-team.md](./05-roadmap-and-team.md) | Thực thi `6` bất biến `INV-01..06` ngoài prompt; **tuyệt đối cấm xem `100 Sealed`** hay tham gia làm đại diện Staff User thử nghiệm. |
+| **Vận hành Hạ tầng & Bảo mật / Pháp lý** | `S5` Ngọc Duy, `P5` Anh Khoa | [01-overview.md](./01-overview.md) → [02-architecture.md](./02-architecture.md) → [04-setup-and-operations.md](./04-setup-and-operations.md) → [03-database-and-contracts.md](./03-database-and-contracts.md) → [05-roadmap-and-team.md](./05-roadmap-and-team.md) | Bảo đảm Fail-Closed, RBAC `SEC 01`, xóa cache `<= 5` phút, Restore Replay (`OPS 07`), thông báo sự cố `<= 4h` (`SEC 07`) và rà soát Phụ lục F trước G2. |
+| **Chất lượng & Kiểm định Độc lập** | `S4` Quý Hải | [01-overview.md](./01-overview.md) → [04-setup-and-operations.md](./04-setup-and-operations.md) → [02-architecture.md](./02-architecture.md) → [03-database-and-contracts.md](./03-database-and-contracts.md) → [05-roadmap-and-team.md](./05-roadmap-and-team.md) | Giữ **độc lập tuyệt đối**: không viết code hoặc tinh chỉnh prompt/retrieval cùng `S2`, `S3`, `S5`; quản lý niêm phong tập `100 Sealed` & `80 Challenges`. |
+
+---
+
+## 3. Thứ tự Ưu tiên Tài liệu & Liên kết Kỹ thuật trong Repository
+
+### Thứ tự ưu tiên khi giải quyết mâu thuẫn (Document Precedence)
+1. Hợp đồng đã ký và các phụ lục sửa đổi có hiệu lực.
+2. Hồ sơ mời thầu RFP (*SongNhat CRM Knowledge and Policy Assistant RFP*) và các văn bản bổ sung đã phát hành.
+3. Đề xuất kỹ thuật – thương mại được chấp thuận.
+4. Bộ tài liệu dự án trong `docs/` này.
+
+### Liên kết nhanh tới Mã nguồn & Hạ tầng Hiện hữu
+- Tổng quan repo & lệnh nhanh: [README.md](../README.md), [dev.ps1](../dev.ps1), [Makefile](../Makefile), [docker-compose.yml](../docker-compose.yml), [.env.example](../.env.example).
+- Backend API & cấu hình chuẩn Base Scope: [backend/src/main.py](../backend/src/main.py), [backend/src/config.py](../backend/src/config.py), [backend/src/shared/contracts.py](../backend/src/shared/contracts.py), [backend/src/shared/enums.py](../backend/src/shared/enums.py), [backend/src/shared/exceptions.py](../backend/src/shared/exceptions.py), [backend/src/shared/auth.py](../backend/src/shared/auth.py), [backend/src/shared/pii_guard.py](../backend/src/shared/pii_guard.py).
+- Bộ kiểm thử hợp đồng kiến trúc & Base Scope: [backend/tests/test_srs_scaffold_contracts.py](../backend/tests/test_srs_scaffold_contracts.py), [backend/tests/test_architecture_contracts.py](../backend/tests/test_architecture_contracts.py).
+- Hợp đồng JSON gói trả lời: [backend/src/modules/answer/schemas.py](../backend/src/modules/answer/schemas.py) & [frontend/src/types/answer.ts](../frontend/src/types/answer.ts).
+- Worker & Scheduled Jobs: [worker/src/celery_app.py](../worker/src/celery_app.py), [worker/src/tasks/import_task.py](../worker/src/tasks/import_task.py), [worker/src/tasks/index_task.py](../worker/src/tasks/index_task.py), [worker/src/tasks/eval_task.py](../worker/src/tasks/eval_task.py).
+- Prompt tiếng Việt & Ranh giới dữ liệu không tin cậy: [prompts/answer_system_vi.txt](../prompts/answer_system_vi.txt), [prompts/README.md](../prompts/README.md).
+- Mẫu CSV UTF-8 & Đánh giá: [data/templates/passages_template.csv](../data/templates/passages_template.csv), [data/templates/critical_fields_template.csv](../data/templates/critical_fields_template.csv), [data/eval/README.md](../data/eval/README.md).
+- Hạ tầng DB, Nginx & CI: [infra/db/init.sql](../infra/db/init.sql), [infra/nginx/nginx.conf](../infra/nginx/nginx.conf), [.github/workflows/ci.yml](../.github/workflows/ci.yml).

@@ -29,6 +29,9 @@ jobs:
       - name: Run Ruff lint checks
         run: ruff check .
 
+      - name: Run Mypy type checks
+        run: mypy src
+
       - name: Run Pytest backend contracts
         run: pytest -q
 
@@ -64,3 +67,116 @@ jobs:
               assert len(cols) == 23, f'Expected 23 cols, got {len(cols)}'
           print('Template CSV contracts valid')
           "
+
+  docs-link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify docs layout, markdown links, and legacy string ban
+        run: |
+          python - <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+          from urllib.parse import unquote
+
+          repo_root = Path(".").resolve()
+          docs_dir = Path("docs")
+          expected_docs = {
+              "README.md",
+              "01-overview.md",
+              "02-architecture.md",
+              "03-database-and-contracts.md",
+              "04-setup-and-operations.md",
+              "05-roadmap-and-team.md",
+          }
+
+          if not docs_dir.is_dir():
+              print("ERROR: docs/ directory missing", file=sys.stderr)
+              sys.exit(1)
+
+          actual_docs = {p.relative_to(docs_dir).as_posix() for p in docs_dir.rglob("*")}
+          if actual_docs != expected_docs:
+              missing = sorted(expected_docs - actual_docs)
+              extra = sorted(actual_docs - expected_docs)
+              print(f"ERROR: docs/ layout mismatch: missing={missing}, extra={extra}", file=sys.stderr)
+              sys.exit(1)
+
+          required_readmes = [
+              Path("README.md"),
+              Path("backend/tests/ops/README.md"),
+              Path("backend/tests/eval/README.md"),
+              Path("data/eval/README.md"),
+              Path("data/templates/README.md"),
+              Path("prompts/README.md"),
+          ]
+          ignore_parts = {".git", ".pytest_cache", "node_modules", ".venv", ".next", "__pycache__"}
+          discovered_readmes = [
+              p for p in Path(".").rglob("README.md")
+              if not (set(p.parts) & ignore_parts)
+          ]
+          md_files = sorted(
+              set(required_readmes)
+              | set(discovered_readmes)
+              | {docs_dir / name for name in expected_docs},
+              key=lambda p: p.as_posix(),
+          )
+
+          fenced_code_re = re.compile(r"```[\s\S]*?```|~~~[\s\S]*?~~~")
+          inline_code_re = re.compile(r"`[^`\n]+`")
+          link_re = re.compile(r"!?\[[^\]]*\]\(([^)\n]+)\)")
+          legacy_patterns = [
+              ("work-packages", re.compile(r"work-packages", re.IGNORECASE)),
+              ("pm-schedule-tien", re.compile(r"pm-schedule-tien", re.IGNORECASE)),
+              ("p95 <= 8s", re.compile(r"p95\s*(?:<=|≤)\s*8\s*s\b", re.IGNORECASE)),
+              ("8 giây", re.compile(r"\b8\s*giây\b", re.IGNORECASE)),
+          ]
+
+          errors = []
+          for md_path in md_files:
+              if not md_path.is_file():
+                  errors.append(f"Missing markdown file: {md_path.as_posix()}")
+                  continue
+
+              text = md_path.read_text(encoding="utf-8")
+              for label, pat in legacy_patterns:
+                  for lineno, line in enumerate(text.splitlines(), start=1):
+                      if pat.search(line):
+                          errors.append(f"{md_path.as_posix()}:{lineno}: legacy string {label!r} found")
+
+              stripped = inline_code_re.sub("", fenced_code_re.sub("", text))
+              for match in link_re.finditer(stripped):
+                  raw_target = match.group(1).strip()
+                  if raw_target.startswith("<") and ">" in raw_target:
+                      target = raw_target[1:raw_target.index(">")].strip()
+                  else:
+                      target = raw_target.split()[0]
+
+                  if not target or target.startswith(("#", "http://", "https://", "mailto:", "tel:")):
+                      continue
+
+                  target_no_frag = unquote(target.split("#", 1)[0].split("?", 1)[0])
+                  if not target_no_frag:
+                      continue
+
+                  resolved = (
+                      (repo_root / target_no_frag.lstrip("/")).resolve()
+                      if target_no_frag.startswith("/")
+                      else (md_path.parent / target_no_frag).resolve()
+                  )
+                  if not resolved.exists():
+                      errors.append(f"{md_path.as_posix()}: broken link -> {target}")
+
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Docs layout, links ({len(md_files)} files), and legacy string checks passed")
+          PY

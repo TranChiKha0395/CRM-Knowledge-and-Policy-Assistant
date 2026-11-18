@@ -148,7 +148,11 @@ export default function ChatSplitScreenPage() {
             )}
 
             <div>
-              <h2>Diễn giải hướng dẫn (Verified)</h2>
+              <h2>
+                {answer.status === "answered"
+                  ? "Diễn giải hướng dẫn (Verified)"
+                  : "Thông báo tạm giữ / từ chối"}
+              </h2>
               <p>{answer.guidance_text}</p>
             </div>
 

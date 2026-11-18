@@ -3,7 +3,7 @@
 #
 # Profiles:
 #   (default) db, redis         — Phase 1-2: Foundation & Retrieval
-#   --profile app               — Full stack: backend + frontend + nginx + worker
+#   --profile app               — Full stack: backend + frontend + nginx + worker + beat
 
 services:
   # ── Databases (luôn khởi động trong dev) ──────────────────────────────────
@@ -44,6 +44,11 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ckpa:ckpa_pass@db:5432/ckpa_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
     ports:
       - "8000:8000"
     depends_on:
@@ -54,6 +59,7 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/app/data
+      - ./prompts:/app/prompts:ro
 
   worker:
     profiles: [app]
@@ -62,6 +68,11 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ckpa:ckpa_pass@db:5432/ckpa_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
     command: celery -A src.celery_app worker -l info
     depends_on:
       db:
@@ -71,6 +82,27 @@ services:
     volumes:
       - ./worker:/app
       - ./data:/app/data
+
+  beat:
+    profiles: [app]
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ckpa:ckpa_pass@db:5432/ckpa_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    command: celery -A src.celery_app beat -l info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./worker:/app
 
   frontend:
     profiles: [app]

@@ -1,9 +1,11 @@
 """Admin lifecycle approval, instant withdrawal, and Base Scope ops service."""
 
 from datetime import datetime
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -17,12 +19,17 @@ from src.modules.answer.models import AnswerCitationRecord, AnswerPackageRecord
 from src.modules.knowledge.models import DocumentVersion, Passage
 from src.modules.policy.models import CriticalField, PolicyLifecycleEvent, PolicyVersion
 from src.shared.auth import AuthenticatedUser
+from src.shared.contracts import CachePurgePort
 from src.shared.enums import PolicyLifecycleStatus, UserRole
 from src.shared.exceptions import AccessDenied, PolicyNotFound, SourceConflict
 
 
 class AdminService:
     """Enforces 7-state policy governance and instant withdrawal semantics (KNW 03, KNW 04)."""
+
+    def __init__(self) -> None:
+        self._emergency_disabled: bool = False
+        self._emergency_disable_reason: str | None = None
 
     async def transition_policy_status(
         self,
@@ -88,6 +95,7 @@ class AdminService:
         user: AuthenticatedUser,
         policy_version_id: str,
         reason: str,
+        cache_purger: CachePurgePort | None = None,
     ) -> InstantWithdrawalResponse:
         """Update authoritative DB to withdrawn first, invalidate answers, and trigger purge."""
         version = await db.get(PolicyVersion, policy_version_id)
@@ -140,12 +148,42 @@ class AdminService:
         )
         await db.commit()
 
+        if cache_purger is not None:
+            await cache_purger.purge_policy_caches(
+                policy_version_id, version.document_version_id
+            )
+        # TODO(G1): Enqueue Celery cache-purge task within CACHE_WITHDRAWAL_MAX_SECONDS
+        # when cache_purger is None.
+
+        stale_rowcount = cast(CursorResult[Any], stale_result).rowcount
         return InstantWithdrawalResponse(
             policy_version_id=policy_version_id,
             status=PolicyLifecycleStatus.WITHDRAWN,
-            stale_answers_marked=int(stale_result.rowcount or 0),
+            stale_answers_marked=int(stale_rowcount or 0),
             cache_purge_deadline_seconds=settings.CACHE_WITHDRAWAL_MAX_SECONDS,
         )
+
+    async def set_emergency_disable(
+        self,
+        user: AuthenticatedUser,
+        disabled: bool,
+        reason: str,
+    ) -> dict[str, object]:
+        """Toggle OPS 05 emergency assistant disable state (Redis scaffold for Gate G1)."""
+        # TODO(G1): Persist toggle in Redis under settings.EMERGENCY_DISABLE_CACHE_KEY and audit.
+        self._emergency_disabled = disabled
+        self._emergency_disable_reason = reason
+        return {
+            "disabled": self._emergency_disabled,
+            "reason": reason,
+            "actor_id": user.user_id,
+            "cache_key": settings.EMERGENCY_DISABLE_CACHE_KEY,
+        }
+
+    async def is_emergency_disabled(self) -> bool:
+        """Check whether OPS 05 emergency assistant disable mode is currently active."""
+        # TODO(G1): Read state from Redis under settings.EMERGENCY_DISABLE_CACHE_KEY.
+        return self._emergency_disabled
 
     def get_ops_summary(self) -> AdminOpsSummaryResponse:
         """Expose active RFP/SRS boundaries and Base Scope pilot telemetry limits."""
