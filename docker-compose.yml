@@ -14,6 +14,8 @@ services:
       POSTGRES_DB: ckpa_db
       POSTGRES_USER: ckpa
       POSTGRES_PASSWORD: ckpa_pass
+      TZ: Asia/Ho_Chi_Minh
+      PGTZ: Asia/Ho_Chi_Minh
     ports:
       - "5432:5432"
     volumes:
@@ -56,6 +58,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./backend:/app
       - ./data:/app/data
@@ -111,10 +124,14 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   nginx:
     profiles: [app]

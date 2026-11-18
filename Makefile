@@ -7,7 +7,7 @@ up:
 	docker compose --profile app up -d
 
 down:
-	docker compose down
+	docker compose --profile app down
 
 dev-db:
 	docker compose up -d db redis

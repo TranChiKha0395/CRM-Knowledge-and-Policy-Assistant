@@ -33,6 +33,8 @@ jobs:
         run: mypy src
 
       - name: Run Pytest backend contracts
+        env:
+          APP_ENV: test
         run: pytest -q
 
   worker-syntax-check:
