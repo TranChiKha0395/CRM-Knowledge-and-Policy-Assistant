@@ -60,3 +60,4 @@ htmlcov/
 # Temporary diagnostic & test output files
 *.txt
 !requirements.txt
+SongNhat_RFP_Mapping

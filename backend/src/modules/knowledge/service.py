@@ -126,3 +126,9 @@ class KnowledgeService:
             staleness_threshold_hours=settings.IMPORT_SNAPSHOT_STALENESS_HOURS,
             is_stale=age_hours > settings.IMPORT_SNAPSHOT_STALENESS_HOURS,
         )
+
+    async def get_latest_snapshot_age(self, db: AsyncSession) -> SnapshotAgeResponse:
+        """Query latest completed import timestamp and return VN snapshot freshness."""
+        # TODO(G1): Query latest completed ImportBatch.batch_timestamp from PostgreSQL.
+        _ = db
+        return self.compute_snapshot_age(None)

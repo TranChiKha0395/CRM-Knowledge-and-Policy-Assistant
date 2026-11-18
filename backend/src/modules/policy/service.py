@@ -15,6 +15,7 @@ from src.modules.policy.schemas import (
     AuthorityEntryResponse,
     CriticalFieldItem,
 )
+from src.shared.contracts import PolicyGateDecision
 from src.shared.enums import (
     AuthorityTier,
     ComparisonOperator,
@@ -45,26 +46,19 @@ class PolicyService:
         """Select applicable versions without inferring implicit contract override precedence."""
         tz = ZoneInfo(settings.APP_TIMEZONE)
         gov_date, is_historical, is_future = self.resolve_governing_date_vn(requested_date)
+        future_preview = is_future and allow_future_preview
         eligible: list[ApplicabilityCandidate] = []
 
         for c in candidates:
-            if c.status in {
-                PolicyLifecycleStatus.DRAFT,
-                PolicyLifecycleStatus.OWNER_REVIEWED,
-                PolicyLifecycleStatus.APPROVED,
-                PolicyLifecycleStatus.WITHDRAWN,
-                PolicyLifecycleStatus.QUARANTINED,
-            }:
-                continue
-            if c.status == PolicyLifecycleStatus.SCHEDULED and not (
-                is_future and allow_future_preview
+            if not self._is_status_eligible(
+                c.status,
+                is_historical=is_historical,
+                is_future_preview=future_preview,
             ):
                 continue
-            if c.status == PolicyLifecycleStatus.SUPERSEDED and not is_historical:
-                continue
 
-            eff_from = c.effective_from.astimezone(tz).date()
-            eff_to = c.effective_to.astimezone(tz).date() if c.effective_to else None
+            eff_from = self._to_vn_date(c.effective_from, tz)
+            eff_to = self._to_vn_date(c.effective_to, tz) if c.effective_to else None
             if eff_from <= gov_date and (eff_to is None or gov_date <= eff_to):
                 eligible.append(c)
 
@@ -85,11 +79,93 @@ class PolicyService:
             governing_date=gov_date,
             timezone=settings.APP_TIMEZONE,
             is_historical=is_historical,
-            is_future_preview=is_future and allow_future_preview,
+            is_future_preview=future_preview,
             applicable_version_ids=[c.version_id for c in eligible],
             has_conflict=has_conflict,
             hold_reason=hold_reason,
         )
+
+    def evaluate_policy_gate(
+        self,
+        candidates: list[ApplicabilityCandidate],
+        *,
+        requested_date: date | None = None,
+        allow_future_preview: bool = False,
+        critical_fields: list[CriticalFieldItem] | None = None,
+        snapshot_age_hours: float | None = None,
+        is_snapshot_stale: bool = False,
+    ) -> PolicyGateDecision:
+        """Evaluate Layer 2 deterministic applicability, conflict hold, and critical fields."""
+        applicability = self.evaluate_candidates(
+            candidates,
+            requested_date=requested_date,
+            allow_future_preview=allow_future_preview,
+        )
+        applicable_ids = tuple(applicability.applicable_version_ids)
+        applicable_set = set(applicable_ids)
+
+        filtered_fields: tuple[CriticalFieldItem, ...] = ()
+        if critical_fields and applicable_set:
+            filtered_fields = tuple(
+                cf
+                for cf in critical_fields
+                if self._is_status_eligible(
+                    cf.status,
+                    is_historical=applicability.is_historical,
+                    is_future_preview=applicability.is_future_preview,
+                )
+                and (
+                    cf.policy_version_id in applicable_set
+                    or cf.document_version_id in applicable_set
+                )
+            )
+
+        hold_reason = applicability.hold_reason
+        if not applicability.has_conflict and not applicable_ids:
+            hold_reason = (
+                "DAT 04 Hold: Không tìm thấy phiên bản chính sách hiệu lực cho ngày chi phối; "
+                "cần chuyển chủ sở hữu chính sách."
+            )
+
+        return PolicyGateDecision(
+            governing_date=applicability.governing_date,
+            timezone=applicability.timezone,
+            is_historical=applicability.is_historical,
+            is_future_preview=applicability.is_future_preview,
+            applicable_version_ids=applicable_ids,
+            has_conflict=applicability.has_conflict,
+            can_proceed=bool(applicable_ids) and not applicability.has_conflict,
+            hold_reason=hold_reason,
+            critical_fields=filtered_fields,
+            snapshot_age_hours=snapshot_age_hours,
+            is_snapshot_stale=is_snapshot_stale,
+        )
+
+    def _to_vn_date(self, dt: datetime, tz: ZoneInfo) -> date:
+        localized = dt.astimezone(tz) if dt.tzinfo is not None else dt.replace(tzinfo=tz)
+        return localized.date()
+
+    def _is_status_eligible(
+        self,
+        status: PolicyLifecycleStatus,
+        *,
+        is_historical: bool,
+        is_future_preview: bool,
+    ) -> bool:
+        if status in {
+            PolicyLifecycleStatus.DRAFT,
+            PolicyLifecycleStatus.OWNER_REVIEWED,
+            PolicyLifecycleStatus.APPROVED,
+            PolicyLifecycleStatus.WITHDRAWN,
+            PolicyLifecycleStatus.QUARANTINED,
+            PolicyLifecycleStatus.FEEDBACK_CANDIDATE,
+        }:
+            return False
+        if status == PolicyLifecycleStatus.SCHEDULED and not is_future_preview:
+            return False
+        if status == PolicyLifecycleStatus.SUPERSEDED and not is_historical:
+            return False
+        return True
 
     def evaluate_numeric_threshold(
         self, operator: ComparisonOperator, actual: Decimal, target: str
