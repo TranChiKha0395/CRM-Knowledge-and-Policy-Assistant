@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*$py.class
 .Python
 *.egg-info/
 dist/
@@ -12,6 +13,7 @@ build/
 .venv/
 venv/
 env/
+ENV/
 .env
 *.env.*
 !.env.example
@@ -28,6 +30,7 @@ data/import/
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 secrets/
 
 # Docker
@@ -50,4 +53,11 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Streamlit configuration & logs
+.streamlit/*
+!.streamlit/config.toml
+
+# Temporary diagnostic & test output files
+*.txt
+!requirements.txt
 SongNhat_RFP_Mapping
