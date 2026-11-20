@@ -837,3 +837,115 @@ class TestSelectionSchemaInvariants:
                 code="UNKNOWN_CODE",  # type: ignore[arg-type]
                 reason_vi="Invalid",
             )
+
+
+# ===========================================================================
+# G. Vietnamese Normalisation & CRM Glossary (VN 01, SUB08)
+# ===========================================================================
+
+class TestVietnameseNormalizationVN01SUB08:
+    """VN 01 / SUB08: Test unaccent and CRM glossary matching in 6-dim scope."""
+
+    def test_unaccented_product_matches_accented_policy(self, svc: SelectionService):
+        c = _make_candidate(scope="product=biến tần trung thế")
+        dims = ScopeDimensions(
+            company=None,
+            branch=None,
+            role=None,
+            customer_category=None,
+            product="bien tan",
+            transaction_scope=None,
+        )
+        result = svc.match_scope_6dim(c, dims)
+        assert result.matched is True
+
+    def test_crm_synonym_role_gdcn_matches_giam_doc_chi_nhanh(self, svc: SelectionService):
+        c = _make_candidate(scope="role=giám đốc chi nhánh")
+        dims = ScopeDimensions(
+            company=None,
+            branch=None,
+            role="gđcn",
+            customer_category=None,
+            product=None,
+            transaction_scope=None,
+        )
+        result = svc.match_scope_6dim(c, dims)
+        assert result.matched is True
+
+    def test_crm_synonym_b2b_matches_khach_hang_doanh_nghiep(self, svc: SelectionService):
+        c = _make_candidate(scope="customer_category=b2b")
+        dims = ScopeDimensions(
+            company=None,
+            branch=None,
+            role=None,
+            customer_category="khách hàng doanh nghiệp",
+            product=None,
+            transaction_scope=None,
+        )
+        result = svc.match_scope_6dim(c, dims)
+        assert result.matched is True
+
+    def test_technical_product_synonym_match(self, svc: SelectionService):
+        c = _make_candidate(scope="product=Động cơ công nghiệp 3 pha")
+        dims = ScopeDimensions(
+            company=None,
+            branch=None,
+            role=None,
+            customer_category=None,
+            product="motor 3 pha",
+            transaction_scope=None,
+        )
+        result = svc.match_scope_6dim(c, dims)
+        assert result.matched is True
+
+
+# ===========================================================================
+# H. Deterministic Numeric Threshold Arithmetic (OPS 04, 0% LLM)
+# ===========================================================================
+
+class TestDeterministicNumericThreshold:
+    """OPS 04 / Acceptance Criteria: 0% arithmetic through LLM."""
+
+    from decimal import Decimal
+
+    def test_threshold_comparisons(self, svc: SelectionService):
+        from decimal import Decimal
+
+        assert svc.evaluate_numeric_threshold(ComparisonOperator.LE, Decimal("10"), "15") is True
+        assert svc.evaluate_numeric_threshold(ComparisonOperator.LE, Decimal("20"), "15") is False
+        assert svc.evaluate_numeric_threshold(ComparisonOperator.LT, Decimal("15"), "15") is False
+        assert svc.evaluate_numeric_threshold(ComparisonOperator.GE, Decimal("15"), "15") is True
+        assert svc.evaluate_numeric_threshold(ComparisonOperator.GT, Decimal("16"), "15") is True
+        assert svc.evaluate_numeric_threshold(ComparisonOperator.EQ, Decimal("15"), "15") is True
+
+    def test_threshold_between(self, svc: SelectionService):
+        from decimal import Decimal
+
+        assert svc.evaluate_numeric_threshold(
+            ComparisonOperator.BETWEEN, Decimal("15"), "10;20"
+        ) is True
+        assert svc.evaluate_numeric_threshold(
+            ComparisonOperator.BETWEEN, Decimal("25"), "10;20"
+        ) is False
+
+    def test_dat08_missing_tables_or_attachments_triggers_hold(
+        self, svc: SelectionService, default_dimensions: ScopeDimensions
+    ):
+        vid = str(uuid.uuid4())
+        c = _make_candidate(version_id=vid)
+        gate = _make_gate_ok([vid])
+
+        result = svc.run_selection(
+            candidates=[c],
+            dimensions=default_dimensions,
+            all_critical_fields=[],
+            gate_decision=gate,
+            missing_tables_or_attachments=True,
+            missing_attachment_detail="Thiếu bảng tỷ lệ hoa hồng phụ lục II.",
+        )
+        assert result.hold_decision.must_hold is True
+        assert any(
+            t.code == "DAT08_MISSING_TABLE_OR_ANNOTATION"
+            for t in result.hold_decision.triggers
+        )
+        assert "phụ lục II" in (result.hold_decision.combined_reason_vi or "")

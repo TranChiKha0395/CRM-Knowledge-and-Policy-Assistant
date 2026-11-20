@@ -22,10 +22,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from src.config import settings
 from src.modules.policy.schemas import ApplicabilityCandidate, CriticalFieldItem
+from src.modules.retrieval.models import (
+    VIETNAMESE_CRM_SYNONYMS,
+    VIETNAMESE_TECHNICAL_TERMS,
+    VIETNAMESE_UNACCENT_MAPPINGS,
+)
 from src.modules.selection.schemas import (
     CriticalFieldLookupRequest,
     CriticalFieldLookupResult,
@@ -37,7 +43,7 @@ from src.modules.selection.schemas import (
     SelectionResult,
 )
 from src.shared.contracts import PolicyGateDecision
-from src.shared.enums import PolicyLifecycleStatus
+from src.shared.enums import ComparisonOperator, PolicyLifecycleStatus
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -57,29 +63,62 @@ _DIMENSION_KEYS: tuple[str, ...] = (
 )
 
 
-def _normalise_dim(value: str | None) -> str | None:
-    """Strip and lower-case a scope dimension token (VN 01 safe, no accent removal)."""
+def _normalize_dim_token(value: str | None) -> str | None:
+    """Normalize whitespace and map unaccented phrases using VN 01 SUB08 dictionary."""
     if value is None:
         return None
-    return value.strip().lower()
+    val = " ".join(value.strip().lower().split())
+    for unacc, acc in VIETNAMESE_UNACCENT_MAPPINGS.items():
+        if unacc in val:
+            val = val.replace(unacc, acc)
+    return val
+
+
+def _get_synonym_family(value: str) -> set[str]:
+    """Retrieve synonym family from SUB08 dictionary (synonyms, technical terms)."""
+    norm = _normalize_dim_token(value)
+    if not norm:
+        return set()
+    syns = {norm, value.strip().lower()}
+
+    # Check VIETNAMESE_CRM_SYNONYMS
+    for k, v_tuple in VIETNAMESE_CRM_SYNONYMS.items():
+        family = {k.lower()} | {item.lower() for item in v_tuple}
+        if any(item in syns for item in family):
+            syns.update(family)
+
+    # Check VIETNAMESE_TECHNICAL_TERMS
+    for k, v in VIETNAMESE_TECHNICAL_TERMS.items():
+        pair = {k.lower(), v.lower()}
+        if any(item in syns for item in pair):
+            syns.update(pair)
+
+    return syns
 
 
 def _dim_matches(request_val: str | None, policy_val: str | None) -> bool:
     """Return True when the policy dimension is compatible with the requested value.
 
-    Rules (DAT 04):
+    Rules (DAT 04 / VN 01 / SUB08):
     1. If the policy dimension is a wildcard → always matches.
     2. If the request did not specify the dimension (None) → always matches.
-    3. Otherwise perform exact string equality after normalisation.
+    3. Exact match after VN 01 unaccent normalization.
+    4. Match via approved SUB08 Vietnamese CRM synonym or technical terms glossary.
     """
-    norm_policy = _normalise_dim(policy_val)
-    norm_request = _normalise_dim(request_val)
+    if policy_val is None:
+        return True
+    norm_policy = _normalize_dim_token(policy_val)
+    if norm_policy in _WILDCARD_VALUES:
+        return True
+    if request_val is None:
+        return True
+    norm_request = _normalize_dim_token(request_val)
+    if norm_policy == norm_request:
+        return True
 
-    if norm_policy is None or norm_policy in _WILDCARD_VALUES:
-        return True
-    if norm_request is None:
-        return True
-    return norm_policy == norm_request
+    policy_syns = _get_synonym_family(policy_val)
+    request_syns = _get_synonym_family(request_val)
+    return bool(policy_syns & request_syns)
 
 
 # ---------------------------------------------------------------------------
@@ -284,17 +323,38 @@ class SelectionService:
     # 4. Mandatory Hold Gate (DAT 04, DAT 05, DAT 08, OPS 03)
     # ------------------------------------------------------------------
 
+    def evaluate_numeric_threshold(
+        self, operator: ComparisonOperator, actual: Decimal, target: str
+    ) -> bool:
+        """Compute threshold checks deterministically in Python (OPS 04, 0% LLM)."""
+        if operator == ComparisonOperator.BETWEEN:
+            low_s, high_s = [part.strip() for part in target.split(";", maxsplit=1)]
+            return Decimal(low_s) <= actual <= Decimal(high_s)
+        bound = Decimal(target.strip())
+        comparators = {
+            ComparisonOperator.LE: actual <= bound,
+            ComparisonOperator.LT: actual < bound,
+            ComparisonOperator.GE: actual >= bound,
+            ComparisonOperator.GT: actual > bound,
+            ComparisonOperator.EQ: actual == bound,
+        }
+        return comparators.get(operator, False)
+
     def evaluate_hold(
         self,
         gate_decision: PolicyGateDecision,
         critical_field_results: list[CriticalFieldLookupResult],
+        *,
+        missing_tables_or_attachments: bool = False,
+        missing_attachment_detail: str | None = None,
     ) -> SelectionHoldDecision:
         """Evaluate all mandatory Hold conditions and return a consolidated decision.
 
         Hold is triggered (OPS 03) for ANY of:
         1. DAT 04 – No governing date rule found (no applicable versions).
         2. DAT 05 – Source conflict detected between overlapping authority tiers.
-        3. DAT 08 – Essential table / annotation missing in matched critical fields.
+        3. DAT 08 – Essential table / annotation missing in matched critical fields
+           or missing required tables/attachments.
 
         The pipeline MUST NOT call the LLM if ``must_hold`` is True.
         """
@@ -325,7 +385,7 @@ class SelectionService:
                 )
             )
 
-        # --- DAT 08: Missing table / annotation ---
+        # --- DAT 08: Missing table / annotation in critical fields ---
         for cf_result in critical_field_results:
             if cf_result.has_missing_annotations:
                 detail = cf_result.missing_annotation_detail or "Thiếu chú thích hoặc bảng nguồn."
@@ -335,6 +395,16 @@ class SelectionService:
                         reason_vi=f"DAT 08 Hold [{cf_result.version_id}]: {detail}",
                     )
                 )
+
+        # --- DAT 08: Missing essential tables or attachments flag ---
+        if missing_tables_or_attachments:
+            detail_att = missing_attachment_detail or "Thiếu bảng số liệu hoặc phụ lục bắt buộc."
+            triggers.append(
+                HoldTrigger(
+                    code="DAT08_MISSING_TABLE_OR_ANNOTATION",
+                    reason_vi=f"DAT 08 Hold: {detail_att}",
+                )
+            )
 
         # --- OPS 03: Propagate gate-level hold (e.g. stale snapshot) ---
         if gate_decision.hold_reason and not gate_decision.can_proceed:
@@ -375,6 +445,8 @@ class SelectionService:
         all_critical_fields: list[CriticalFieldItem],
         gate_decision: PolicyGateDecision,
         requested_date: date | None = None,
+        missing_tables_or_attachments: bool = False,
+        missing_attachment_detail: str | None = None,
     ) -> SelectionResult:
         """Execute the full Selection layer pipeline deterministically.
 
@@ -423,7 +495,12 @@ class SelectionService:
             )
 
         # Step 4: Hold evaluation
-        hold_decision = self.evaluate_hold(gate_decision, cf_lookup_results)
+        hold_decision = self.evaluate_hold(
+            gate_decision,
+            cf_lookup_results,
+            missing_tables_or_attachments=missing_tables_or_attachments,
+            missing_attachment_detail=missing_attachment_detail,
+        )
 
         return SelectionResult(
             task_id=tid,

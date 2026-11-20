@@ -27,6 +27,14 @@ class SelectionRequest(BaseModel):
     dimensions: ScopeDimensions
     candidates: list[ApplicabilityCandidate] = Field(default_factory=list)
     critical_fields: list[CriticalFieldItem] = Field(default_factory=list)
+    missing_tables_or_attachments: bool = Field(
+        default=False,
+        description="Flag indicating missing essential tables or attachments (DAT 08).",
+    )
+    missing_attachment_detail: str | None = Field(
+        default=None,
+        description="Detail of missing table or attachment (DAT 08).",
+    )
     # Caller may supply a pre-computed gate decision from the policy layer
     gate_decision: PolicyGateDecision | None = Field(
         default=None,
@@ -76,6 +84,8 @@ async def run_selection(
         all_critical_fields=body.critical_fields,
         gate_decision=gate,
         requested_date=body.requested_date,
+        missing_tables_or_attachments=body.missing_tables_or_attachments,
+        missing_attachment_detail=body.missing_attachment_detail,
     )
     return result
 
