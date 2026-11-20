@@ -58,7 +58,11 @@ VIETNAMESE_CRM_SYNONYMS: dict[str, tuple[str, ...]] = {
     "qđ": ("quyết định", "decision"),
     "sla": ("cam kết thời gian giải quyết", "cam kết dịch vụ", "service level agreement"),
     "sop": ("quy trình chuẩn", "quy trình vận hành tiêu chuẩn", "standard operating procedure"),
-    "pii": ("thông tin định danh cá nhân", "dữ liệu cá nhân", "personally identifiable information"),
+    "pii": (
+        "thông tin định danh cá nhân",
+        "dữ liệu cá nhân",
+        "personally identifiable information",
+    ),
 }
 
 # Vietnamese negation terms that MUST BE PRESERVED during normalization (ANS 02, ANS 07).

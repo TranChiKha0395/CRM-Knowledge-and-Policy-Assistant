@@ -55,7 +55,7 @@ def require_roles(
 
 
 def check_policy_audience(user: AuthenticatedUser, record_audiences: list[str]) -> bool:
-    """Enforce consistent audience filtering across pre-retrieval, generation, and display (SEC 01)."""
+    """Enforce consistent audience filtering across pre-retrieval, generation, and display (SEC 01)."""  # noqa: E501
     if UserRole.ADMINISTRATOR in user.roles or "administrator" in user.allowed_audiences:
         return True
     normalized: set[str] = set()
@@ -70,7 +70,10 @@ def check_policy_audience(user: AuthenticatedUser, record_audiences: list[str]) 
         return False
     if "all" in normalized or "public" in normalized:
         return True
-    user_scopes = {role.value.lower() for role in user.roles} | {aud.lower() for aud in user.allowed_audiences}
+    user_scopes = (
+        {role.value.lower() for role in user.roles}
+        | {aud.lower() for aud in user.allowed_audiences}
+    )
     return bool(normalized & user_scopes)
 
 

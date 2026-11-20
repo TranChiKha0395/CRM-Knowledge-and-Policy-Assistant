@@ -5,8 +5,9 @@ pre-retrieval RBAC and 7-state filtering integrity.
 """
 
 import json
-from pathlib import Path
 import re
+from pathlib import Path
+
 import pytest
 
 from src.modules.knowledge.schemas import PassageSummary

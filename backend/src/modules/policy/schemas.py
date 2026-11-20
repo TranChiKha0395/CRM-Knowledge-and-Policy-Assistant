@@ -1,4 +1,4 @@
-"""Pydantic schemas for critical fields, governing-date applicability, and authority tiers [CKPA-17]."""
+"""Pydantic schemas for critical fields, governing-date applicability, and authority tiers [CKPA-17]."""  # noqa: E501
 
 from datetime import date, datetime
 from decimal import Decimal

@@ -1,7 +1,7 @@
 """Pre-filtered hybrid Vietnamese retrieval service (ANS 02, VN 01, SEC 01, KNW 03)."""
 
-from datetime import date, datetime
 import re
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from src.config import settings
@@ -53,7 +53,7 @@ class RetrievalService:
         return list(dict.fromkeys(found))
 
     def normalize_query_vi(self, query: str) -> tuple[str, list[str]]:
-        """Normalize whitespace, map unaccented phrases, expand CRM synonyms, and preserve negations."""
+        """Normalize whitespace, map unaccented phrases, expand CRM synonyms, preserve negations."""
         cleaned = re.sub(r"\s+", " ", query.strip())
         normalized = cleaned.lower()
 
@@ -160,7 +160,11 @@ class RetrievalService:
             if p.status == PolicyLifecycleStatus.SCHEDULED:
                 if not allow_future_preview:
                     continue
-                eff_start = p.effective_from.date() if isinstance(p.effective_from, datetime) else p.effective_from
+                eff_start = (
+                    p.effective_from.date()
+                    if isinstance(p.effective_from, datetime)
+                    else p.effective_from
+                )
                 if target_date < eff_start and not allow_future_preview:
                     continue
 
@@ -169,22 +173,38 @@ class RetrievalService:
                 if not allow_historical:
                     continue
                 if target_date is not None:
-                    eff_start = p.effective_from.date() if isinstance(p.effective_from, datetime) else p.effective_from
+                    eff_start = (
+                        p.effective_from.date()
+                        if isinstance(p.effective_from, datetime)
+                        else p.effective_from
+                    )
                     if target_date < eff_start:
                         continue
                     if p.effective_to is not None:
-                        eff_end = p.effective_to.date() if isinstance(p.effective_to, datetime) else p.effective_to
+                        eff_end = (
+                            p.effective_to.date()
+                            if isinstance(p.effective_to, datetime)
+                            else p.effective_to
+                        )
                         if target_date > eff_end:
                             continue
 
             # 5e. Effective policies (current active)
             elif p.status == PolicyLifecycleStatus.EFFECTIVE:
                 if target_date is not None:
-                    eff_start = p.effective_from.date() if isinstance(p.effective_from, datetime) else p.effective_from
+                    eff_start = (
+                        p.effective_from.date()
+                        if isinstance(p.effective_from, datetime)
+                        else p.effective_from
+                    )
                     if target_date < eff_start:
                         continue
                     if p.effective_to is not None:
-                        eff_end = p.effective_to.date() if isinstance(p.effective_to, datetime) else p.effective_to
+                        eff_end = (
+                            p.effective_to.date()
+                            if isinstance(p.effective_to, datetime)
+                            else p.effective_to
+                        )
                         if target_date > eff_end:
                             continue
 

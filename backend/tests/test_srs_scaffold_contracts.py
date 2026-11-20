@@ -242,7 +242,9 @@ def test_policy_applicability_conflict_hold_and_chinese_wall() -> None:
 def test_ckpa_17_answer_package_seven_parts_and_strict_schema() -> None:
     """[CKPA-17] Verify AnswerPackage 7 parts and strict Pydantic v2 validation (fail-closed)."""
     from datetime import date
+
     from pydantic import ValidationError
+
     from src.modules.policy.schemas import CriticalFieldItem
     from src.shared.enums import CriticalFieldType
 

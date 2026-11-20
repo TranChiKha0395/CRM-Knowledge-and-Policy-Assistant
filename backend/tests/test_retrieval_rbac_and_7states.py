@@ -2,15 +2,10 @@
 
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
+
 import pytest
 
-from src.config import settings
 from src.modules.knowledge.schemas import PassageSummary
-from src.modules.retrieval.models import (
-    VIETNAMESE_CRM_SYNONYMS,
-    VIETNAMESE_NEGATIONS,
-    VIETNAMESE_UNACCENT_MAPPINGS,
-)
 from src.modules.retrieval.service import RetrievalService
 from src.shared.auth import AuthenticatedUser, check_policy_audience
 from src.shared.enums import PolicyLifecycleStatus, UserRole
@@ -112,7 +107,9 @@ def test_check_policy_audience_reader_isolation(sample_users: dict[str, Authenti
     assert not check_policy_audience(reader, [])
 
 
-def test_check_policy_audience_steward_and_owner(sample_users: dict[str, AuthenticatedUser]) -> None:
+def test_check_policy_audience_steward_and_owner(
+    sample_users: dict[str, AuthenticatedUser],
+) -> None:
     """Steward and Policy Owner strictly isolated according to their assigned roles."""
     steward = sample_users["steward"]
     owner = sample_users["policy_owner"]
@@ -184,7 +181,12 @@ def test_scheduled_allowed_only_with_future_preview(
     user = sample_users["reader"]
     future_date = datetime(2026, 12, 1, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh"))
     candidates = [
-        make_passage("P-SCH", PolicyLifecycleStatus.SCHEDULED, ["reader"], effective_from=future_date),
+        make_passage(
+            "P-SCH",
+            PolicyLifecycleStatus.SCHEDULED,
+            ["reader"],
+            effective_from=future_date,
+        ),
     ]
 
     # Default: blocked
@@ -250,7 +252,12 @@ def test_prefilter_essential_attachments_and_content_bound(
     user = sample_users["reader"]
     candidates = [
         # Missing essential attachments (DAT 08)
-        make_passage("P-NO-ATTACH", PolicyLifecycleStatus.EFFECTIVE, ["reader"], has_essential_attachments=False),
+        make_passage(
+            "P-NO-ATTACH",
+            PolicyLifecycleStatus.EFFECTIVE,
+            ["reader"],
+            has_essential_attachments=False,
+        ),
         # Exceeds max char limit (6000 chars) constructed directly
         PassageSummary.model_construct(
             passage_id="P-OVER-LEN",

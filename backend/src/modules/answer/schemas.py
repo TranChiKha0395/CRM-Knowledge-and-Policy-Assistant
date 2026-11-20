@@ -1,4 +1,4 @@
-"""Pydantic schemas for the mandatory 7-part AnswerPackage (ANS 01, ANS 03, SRS-FR-06.1) [CKPA-17]."""
+"""Pydantic schemas for the mandatory 7-part AnswerPackage (ANS 01, ANS 03, SRS-FR-06.1) [CKPA-17]."""  # noqa: E501
 
 from datetime import date
 
@@ -38,7 +38,8 @@ class AnswerQueryRequest(BaseModel):
 class AnswerPackage(BaseModel):
     """Complete 7-part verified response returned only AFTER post-generation validation.
 
-    Strictly frozen under Gate G1, SRS Mục 4.3, 7.2, SRS-FR-06.1 | RFP: ANS03, ANS04, DEL02 [CKPA-17].
+    Strictly frozen under Gate G1, SRS Mục 4.3, 7.2, SRS-FR-06.1
+    | RFP: ANS03, ANS04, DEL02 [CKPA-17].
     """
 
     model_config = ConfigDict(extra="forbid")
