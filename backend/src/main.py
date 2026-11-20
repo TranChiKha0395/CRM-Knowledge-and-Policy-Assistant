@@ -21,6 +21,7 @@ from src.modules.knowledge.router import router as knowledge_router
 from src.modules.policy.router import router as policy_router
 from src.modules.referral.router import router as referral_router
 from src.modules.retrieval.router import router as retrieval_router
+from src.modules.selection.router import router as selection_router
 from src.modules.validation.router import router as validation_router
 from src.shared.exceptions import (
     AccessDenied,
@@ -96,6 +97,7 @@ app.include_router(referral_router, prefix=f"{API}/referral", tags=["Referral"])
 app.include_router(feedback_router, prefix=f"{API}/feedback", tags=["Feedback"])
 app.include_router(audit_router, prefix=f"{API}/audit", tags=["Audit"])
 app.include_router(evaluation_router, prefix=f"{API}/evaluation", tags=["Evaluation"])
+app.include_router(selection_router, prefix=f"{API}/selection", tags=["Selection"])
 app.include_router(admin_router, prefix=f"{API}/admin", tags=["Admin"])
 
 
