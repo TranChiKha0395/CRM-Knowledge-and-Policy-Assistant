@@ -29,7 +29,12 @@ jobs:
       - name: Run Ruff lint checks
         run: ruff check .
 
+      - name: Run Mypy type checks
+        run: mypy src
+
       - name: Run Pytest backend contracts
+        env:
+          APP_ENV: test
         run: pytest -q
 
   worker-syntax-check:

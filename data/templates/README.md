@@ -1,6 +1,6 @@
 # Hợp đồng 2 Tệp Mẫu CSV UTF-8 (`data/templates/`)
 
-> Chi tiết kiểm tra kiểu dữ liệu & quy tắc Quarantine xem tại [docs/architecture/erd-and-csv-contract.md](../../docs/architecture/erd-and-csv-contract.md).
+> Chi tiết kiểm tra kiểu dữ liệu & quy tắc Quarantine xem tại [docs/03-database-and-contracts.md](../../docs/03-database-and-contracts.md).
 
 ## 1. Phạm vi Base Scope (Mục 2 RFP & `DAT 01, 02, 08, KNW 03`)
 - **Bắt buộc UTF-8** (hỗ trợ UTF-8 with BOM hoặc UTF-8 chuẩn; cấm bảng mã TCVN3/VNI-Windows/Windows-1258).

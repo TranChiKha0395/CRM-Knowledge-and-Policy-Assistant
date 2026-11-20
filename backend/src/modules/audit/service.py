@@ -13,6 +13,7 @@ from src.modules.audit.schemas import (
     CostMeterSummaryResponse,
     OpenExportResponse,
 )
+from src.shared.contracts import QuotaStatus
 
 
 class AuditService:
@@ -87,4 +88,110 @@ class AuditService:
         return OpenExportResponse(
             timezone=settings.APP_TIMEZONE,
             record_counts={"passages": 0, "critical_fields": 0, "referrals": 0},
+        )
+
+    async def check_monthly_quota(
+        self,
+        db: AsyncSession | None = None,
+        month_key: str | None = None,
+    ) -> QuotaStatus:
+        """Check Common Bid Basis monthly package and LLM call quotas (OPS 06)."""
+        target_month = month_key or datetime.now(ZoneInfo(settings.APP_TIMEZONE)).strftime("%Y-%m")
+        if db is None:
+            # TODO(G1): require authoritative AsyncSession once persistent metering is wired.
+            return QuotaStatus(
+                month_key=target_month,
+                packages_used=0,
+                package_quota=settings.ANSWER_MAX_PACKAGES_PER_MONTH,
+                llm_calls_used=0,
+                llm_call_quota=settings.LLM_MAX_CALLS_PER_MONTH,
+                allowed=True,
+                reason=None,
+            )
+
+        summary = await self.summarize_month_usage(db, month_key=target_month)
+        pkg_ok = summary.total_packages < summary.package_quota
+        llm_ok = summary.total_llm_calls < summary.llm_call_quota
+        allowed = pkg_ok and llm_ok
+        reason: str | None = None
+        if not pkg_ok:
+            reason = (
+                f"Monthly AnswerPackage quota reached "
+                f"({summary.total_packages}/{summary.package_quota})."
+            )
+        elif not llm_ok:
+            reason = (
+                f"Monthly LLM call quota reached "
+                f"({summary.total_llm_calls}/{summary.llm_call_quota})."
+            )
+        return QuotaStatus(
+            month_key=target_month,
+            packages_used=summary.total_packages,
+            package_quota=summary.package_quota,
+            llm_calls_used=summary.total_llm_calls,
+            llm_call_quota=summary.llm_call_quota,
+            allowed=allowed,
+            reason=reason,
+        )
+
+    async def record_usage_meter(
+        self,
+        db: AsyncSession | None = None,
+        *,
+        task_id: str,
+        answer_package_id: str | None = None,
+        llm_calls: int = 0,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        is_hold: bool = False,
+        is_error: bool = False,
+        estimated_cost_vnd: float = 0.0,
+    ) -> None:
+        """Record per-task token and call usage into UsageCostMeter (OPS 06)."""
+        if db is None:
+            # TODO(G1): enforce AsyncSession persistence when DB metering lands.
+            return
+        month_key = datetime.now(ZoneInfo(settings.APP_TIMEZONE)).strftime("%Y-%m")
+        db.add(
+            UsageCostMeter(
+                month_key=month_key,
+                task_id=task_id,
+                answer_package_id=answer_package_id,
+                llm_calls=llm_calls,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                is_hold=is_hold,
+                is_error=is_error,
+                estimated_cost_vnd=estimated_cost_vnd,
+            )
+        )
+
+    async def record_audit_event(
+        self,
+        db: AsyncSession | None = None,
+        *,
+        actor_id: str,
+        actor_role: str,
+        action: str,
+        resource_type: str,
+        resource_id: str,
+        outcome: str,
+        detail: str | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        """Append an access-restricted audit trail record."""
+        if db is None:
+            # TODO(G1): enforce AsyncSession persistence when audit wiring lands.
+            return
+        db.add(
+            AuditLog(
+                actor_id=actor_id,
+                actor_role=actor_role,
+                action=action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                outcome=outcome,
+                detail=detail,
+                metadata_json=metadata or {},
+            )
         )
